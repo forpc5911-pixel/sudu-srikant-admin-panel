@@ -348,6 +348,8 @@ tr:hover td{background:#faf8f5;}
 <script>
 const STORAGE_KEY = "sudu_live_properties";
 const FIREBASE_URL = "https://sudu-listings-default-rtdb.firebaseio.com";
+const CLOUDINARY_CLOUD = "dzmyhntd4";
+const CLOUDINARY_PRESET = "sudu-listings";
 
 const INITIAL = [
   {id:"karapiti",status:"active",address:"12 Karapiti Place",suburb:"Glen Eden",city:"Auckland",price:"Auction — 10 May, 3:00pm",priceNote:"Auction at Arizto Offices",beds:3,baths:1,carparks:2,landSize:"506m²",images:["https://fastly.ratemyagent.co.nz/image/upload/q_auto:eco,f_auto,w_900,h_600/87b237b6-be3c-f111-abbf-0619d271b24a"],description:"Nestled in a quiet cul-de-sac in the heart of Glen Eden, 12 Karapiti Place offers a wonderful opportunity for families, first-home buyers, and investors alike. This well-presented three-bedroom home sits on a generous 506m² freehold section.\n\nThe home features a spacious open-plan living and dining area that flows to the rear garden, a well-equipped kitchen, a family bathroom, and double garaging with ample off-street parking.",features:["Freehold 506m²","Double Garage","Open Plan Living","Quiet Cul-de-sac","Near Train Station","Good School Zone"],soldDate:""},
@@ -562,9 +564,42 @@ function renderImgList() {
     <div class="img-row">
       <img class="img-preview" src="${url}" onerror="this.style.opacity=0" onload="this.style.opacity=1" style="opacity:${url?1:0}">
       <input value="${url}" placeholder="Paste photo URL here…" oninput="imgChange(${i},this.value)">
+      <label style="cursor:pointer;background:var(--gold);color:#fff;padding:6px 10px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">
+        📁 Upload
+        <input type="file" accept="image/*" style="display:none" onchange="uploadImg(event,${i})">
+      </label>
       ${modalImages.length>1?`<button class="img-del" onclick="delImg(${i})">✕</button>`:''}
     </div>
   `).join('');
+}
+
+async function uploadImg(event, i) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const previews = document.querySelectorAll('.img-preview');
+  if (previews[i]) { previews[i].style.opacity = 0.4; }
+  const inputs = document.querySelectorAll('.img-row input[type="text"], .img-row input:not([type="file"])');
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', CLOUDINARY_PRESET);
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, {
+      method: 'POST',
+      body: formData,
+    });
+    const data = await res.json();
+    if (data.secure_url) {
+      modalImages[i] = data.secure_url;
+      renderImgList();
+      showToast('✅ Photo uploaded!', 'ok');
+    } else {
+      showToast('Upload failed — try again', 'err');
+      renderImgList();
+    }
+  } catch(e) {
+    showToast('Upload failed — check internet', 'err');
+    renderImgList();
+  }
 }
 function imgChange(i,v){modalImages[i]=v;const el=document.querySelectorAll('.img-preview')[i];if(el){el.src=v;el.style.opacity=v?1:0;}}
 function addImg(){modalImages.push('');renderImgList();}
