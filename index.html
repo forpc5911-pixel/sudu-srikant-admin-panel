@@ -347,6 +347,7 @@ tr:hover td{background:#faf8f5;}
 
 <script>
 const STORAGE_KEY = "sudu_live_properties";
+const FIREBASE_URL = "https://sudu-listings-default-rtdb.firebaseio.com";
 
 const INITIAL = [
   {id:"karapiti",status:"active",address:"12 Karapiti Place",suburb:"Glen Eden",city:"Auckland",price:"Auction — 10 May, 3:00pm",priceNote:"Auction at Arizto Offices",beds:3,baths:1,carparks:2,landSize:"506m²",images:["https://fastly.ratemyagent.co.nz/image/upload/q_auto:eco,f_auto,w_900,h_600/87b237b6-be3c-f111-abbf-0619d271b24a"],description:"Nestled in a quiet cul-de-sac in the heart of Glen Eden, 12 Karapiti Place offers a wonderful opportunity for families, first-home buyers, and investors alike. This well-presented three-bedroom home sits on a generous 506m² freehold section.\n\nThe home features a spacious open-plan living and dining area that flows to the rear garden, a well-equipped kitchen, a family bathroom, and double garaging with ample off-street parking.",features:["Freehold 506m²","Double Garage","Open Plan Living","Quiet Cul-de-sac","Near Train Station","Good School Zone"],soldDate:""},
@@ -376,9 +377,10 @@ let toastTimer = null;
 // ── STORAGE ──
 async function loadProps() {
   try {
-    const r = await window.storage.get(STORAGE_KEY, true);
-    if (r && r.value) {
-      properties = JSON.parse(r.value);
+    const res = await fetch(FIREBASE_URL + "/properties.json");
+    const data = await res.json();
+    if (data && Object.keys(data).length > 0) {
+      properties = Array.isArray(data) ? data : Object.values(data);
     } else {
       properties = INITIAL;
       await saveProps();
@@ -392,7 +394,11 @@ async function loadProps() {
 async function saveProps() {
   setSyncState('saving');
   try {
-    await window.storage.set(STORAGE_KEY, JSON.stringify(properties), true);
+    await fetch(FIREBASE_URL + "/properties.json", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(properties),
+    });
     setSyncState('live');
   } catch(e) {
     setSyncState('live');
